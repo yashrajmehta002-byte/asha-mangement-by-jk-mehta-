@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>आशा मैनेजमेंट</title>
+<style>
+:root{--g:#0b7a4b;--g2:#e6f4ec;--r:#c0392b;--b:#dde4e0;--t:#1c2b24;--m:#66766d}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,'Noto Sans Devanagari',sans-serif;color:var(--t);background:#f4f7f5;padding-bottom:70px}
+header{position:sticky;top:0;z-index:5;background:var(--g);color:#fff;padding:8px 10px}
+header .row{display:flex;gap:8px;align-items:center}
+header select{flex:1;padding:8px;border-radius:8px;border:0;font-size:15px;background:#fff;color:var(--t)}
+header .ic{background:#fff3;color:#fff;border:0;border-radius:8px;padding:8px 12px;font-size:14px}
+.banner{background:#fff7d6;color:#5a4600;padding:8px 10px;font-size:14px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+main{padding:10px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--b);display:flex;overflow-x:auto;z-index:6}
+nav button{flex:1 0 62px;border:0;background:none;padding:6px 2px;font-size:11px;color:var(--m)}
+nav button b{display:block;font-size:19px;font-weight:400}
+nav button.on{color:var(--g);font-weight:700;background:var(--g2)}
+h2{font-size:17px;margin:4px 0 10px}
+h3{font-size:15px;margin:14px 0 6px}
+.card{background:#fff;border:1px solid var(--b);border-radius:12px;padding:10px;margin-bottom:10px}
+label{display:block;font-size:13px;color:var(--m);margin:8px 0 0}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--b);border-radius:8px;font:inherit;color:var(--t);background:#fff;margin-top:3px}
+input[type=checkbox]{width:22px;height:22px;margin:0}
+.btn{background:var(--g);color:#fff;border:0;border-radius:10px;padding:10px 14px;font:inherit;font-weight:600}
+.btn.sec{background:#fff;color:var(--g);border:1px solid var(--g)}
+.btn.red{background:var(--r)}
+.btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end}
+.grow{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat{background:#fff;border:1px solid var(--b);border-radius:12px;padding:8px;text-align:center}
+.stat b{display:block;font-size:20px;color:var(--g)}
+.stat span{font-size:12px;color:var(--m)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid var(--b);padding:5px 6px;text-align:left;vertical-align:top}
+th{background:var(--g2)}
+.scroll{overflow-x:auto}
+.item{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--b)}
+.item:last-child{border:0}
+.av{width:42px;height:42px;border-radius:50%;background:var(--g2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:none;font-weight:700;color:var(--g)}
+.av img{width:100%;height:100%;object-fit:cover}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;background:var(--g2);color:var(--g)}
+.tag.bad{background:#fde8e6;color:var(--r)}
+.muted{color:var(--m);font-size:13px}
+.ov{position:fixed;inset:0;background:#0007;z-index:20;display:flex;align-items:center;justify-content:center;padding:20px}
+.bx{background:#fff;border-radius:14px;padding:16px;max-width:380px;width:100%}
+#toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#222;color:#fff;padding:8px 14px;border-radius:99px;font-size:14px;z-index:30;display:none;max-width:90%}
+.photo{width:90px;height:90px;border-radius:12px;object-fit:cover;background:var(--g2)}
+.notice{background:#fff;border:1px solid var(--b);padding:14px;font-size:14px;line-height:1.6}
+.notice .c{text-align:center}.notice .b{font-weight:700;font-size:16px}
+.notice .split{display:flex;justify-content:space-between;gap:8px}
+.notice .sign{display:flex;justify-content:space-between;margin-top:36px;text-align:center}
+#printArea{display:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast"></div>
+<script>
+'use strict';
+/* ====================== आधारभूत ====================== */
+const A = window.Android || null;
+const $ = s => document.querySelector(s);
+const v = id => { const e = document.getElementById(id); return e ? e.value : ''; };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => ymd(new Date());
+const fmt = d => d ? d.split('-').reverse().join('/') : '';
+const L = (hi, en) => (db && db.settings.lang === 'en') ? en : hi;
+const daysBetween = (a, b) => (a && b) ? Math.round((new Date(b) - new Date(a)) / 864e5) + 1 : 0;
+const inRange = (d, f, t) => (!f || d >= f) && (!t || d <= t);
+
+let db = null;
+let ui = { tab: 'home', gid: null, view: null, hf: '', ht: '', update: null };
+
+const DEF_DB = () => ({ v: 1, settings: { lang: 'hi', updateUrl: '' }, groups: [], ashas: [], meetings: [], leaves: [], claims: [], absences: [], notices: [] });
+
+/* ====================== डेटा सेव (IndexedDB + ऑटो बैकअप) ====================== */
+function idb() { return new Promise((res, rej) => { const r = indexedDB.open('asha-mgmt', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function idbGet(k) { const d = await idb(); return new Promise((res, rej) => { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function idbSet(k, val) { const d = await idb(); return new Promise((res, rej) => { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(val, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); }
+let st = null, bt = null;
+function save() { clearTimeout(st); st = setTimeout(persist, 250); clearTimeout(bt); bt = setTimeout(backupNow, 2500); }
+async function persist() { try { await idbSet('db', db); } catch (e) { console.error(e); } }
+function backupNow() { if (A && A.saveBackup) { try { return A.saveBackup(JSON.stringify(db)); } catch (e) { return 'ERR'; } } }
+document.addEventListener('visibilitychange', () => { if (document.hidden && db) { persist(); backupNow(); } });
+
+/* ====================== छोटे सहायक UI ====================== */
+function toast(m) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 2800); }
+function ask(msg, okOnly) {
+  return new Promise(r => {
+    const m = $('#modal');
+    m.innerHTML = `<div class="ov"><div class="bx"><p>${esc(msg).replace(/\n/g, '<br>')}</p><div class="row end">${okOnly ? '' : `<button class="btn sec" id="mc">${L('रद्द', 'Cancel')}</button>`}<button class="btn" id="mo">OK</button></div></div></div>`;
+    $('#mo').onclick = () => { m.innerHTML = ''; r(true); };
+    if (!okOnly) $('#mc').onclick = () => { m.innerHTML = ''; r(false); };
+  });
+}
+const info = m => ask(m, true);
+const inp = (id, label, val, type, extra) => `<label>${label}<input id="${id}" type="${type || 'text'}" value="${esc(val == null ? '' : val)}" ${extra || ''}></label>`;
+const sel = (id, label, opts, val, extra) => `<label>${label}<select id="${id}" ${extra || ''}>${opts.map(o => `<option value="${esc(o[0])}" ${String(o[0]) === String(val) ? 'selected' : ''}>${esc(o[1])}</option>`).join('')}</select></label>`;
+const table = (h, rows) => `<div class="scroll"><table><tr>${h.map(x => `<th>${esc(x)}</th>`).join('')}</tr>${rows.length ? rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${h.length}" class="muted">${L('कोई रिकॉर्ड नहीं', 'No records')}</td></tr>`}</table></div>`;
+
+function compressImage(file, max, q) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const s = Math.min(1, max / Math.max(im.width, im.height));
+        const c = document.createElement('canvas'); c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', q));
+      };
+      im.onerror = () => res('');
+      im.src = r.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+/* ====================== समूह / आशा सहायक ====================== */
+const curGroup = () => { let g = db.groups.find(x => x.id === ui.gid); if (!g && db.groups.length) { g = db.groups[0]; ui.gid = g.id; } return g; };
+const ashasOf = (g, all) => db.ashas.filter(a => a.groupId === g.id && (all || a.status !== 'inactive')).sort((a, b) => a.code.localeCompare(b.code));
+const ashaById = id => db.ashas.find(a => a.id === id);
+const aName = id => { const a = ashaById(id); return a ? a.name : '?'; };
+const mTypes = () => [['sector', L('सेक्टर बैठक', 'Sector meeting')], ['monthly', L('मासिक बैठक', 'Monthly meeting')], ['review', L('रिव्यू मीटिंग', 'Review meeting')], ['training', L('ट्रेनिंग', 'Training')], ['other', L('अन्य', 'Other')]];
+const mTypeLabel = t => (mTypes().find(x => x[0] === t) || [0, t])[1];
+const mTitle = (m, lang) => {
+  const hi = (lang || db.settings.lang) !== 'en';
+  const map = { sector: hi ? 'सेक्टर बैठक' : 'Sector meeting', monthly: hi ? 'मासिक बैठक' : 'Monthly meeting', review: hi ? 'रिव्यू मीटिंग' : 'Review meeting', training: hi ? 'ट्रेनिंग' : 'Training', other: hi ? 'बैठक' : 'Meeting' };
+  return (map[m.type] || m.type) + (m.name ? ' (' + m.name + ')' : '');
+};
+const maskAad = s => s ? 'XXXX-XXXX-' + String(s).slice(-4) : '';
+
+/* क्लेम की अंतिम तारीख: माह 'YYYY-MM' का क्लेम अगले माह की claimEnd तारीख तक */
+function deadline(g, month) { const [y, m] = month.split('-').map(Number); return ymd(new Date(y, m, g.claimEnd || 5)); }
+function defClaimMonth(date, g) {
+  const d = new Date(date); const cur = d.getFullYear() + '-' + pad(d.getMonth() + 1);
+  if (d.getDate() >= (g.claimStart || 30)) return cur;
+  const p = new Date(d.getFullYear(), d.getMonth() - 1, 1); return p.getFullYear() + '-' + pad(p.getMonth() + 1);
+}
+const isLate = c => { const g = db.groups.find(x => x.id === c.groupId); return g ? c.date > deadline(g, c.month) : false; };
+function setClaim(g, ashaId, month, date, source, meetingId) {
+  db.claims = db.claims.filter(c => !(c.ashaId === ashaId && c.month === month));
+  db.claims.push({ id: uid(), groupId: g.id, ashaId, month, date, source, meetingId: meetingId || null });
+}
+
+/* आशा का प्रदर्शन */
+function perf(a, f, t) {
+  const ms = db.meetings.filter(m => m.groupId === a.groupId && m.att && inRange(m.date, f, t) && (!a.doj || m.date >= a.doj));
+  let present = 0; ms.forEach(m => { if (m.att[a.id] && m.att[a.id].p) present++; });
+  const leaveDays = db.leaves.filter(l => l.ashaId === a.id && inRange(l.from, f, t)).reduce((s, l) => s + l.days, 0);
+  const fieldAbs = db.absences.filter(x => x.ashaId === a.id && inRange(x.date, f, t)).length;
+  const cl = db.claims.filter(c => c.ashaId === a.id && inRange(c.date, f, t));
+  return { total: ms.length, present, absent: ms.length - present, leaveDays, fieldAbs, claims: cl.length, late: cl.filter(isLate).length };
+}
+const leaveUsed = (ashaId, year) => db.leaves.filter(l => l.ashaId === ashaId && l.from.slice(0, 4) === String(year)).reduce((s, l) => s + l.days, 0);
+
+/* ====================== मुख्य रेंडर ====================== */
+function render() {
+  if (!db) return;
+  const g = curGroup();
+  if (!g && !(ui.view && ui.view.name === 'groupForm') && ui.tab !== 'settings') ui.view = { name: 'groupForm', id: null };
+  let body;
+  if (ui.view && ui.view.name === 'groupForm') body = vGroupForm();
+  else body = ({ home: vHome, ashas: vAshas, meetings: vMeetings, leaves: vLeaves, claims: vClaims, notices: vNotices, reports: vReports, settings: vSettings })[ui.tab]();
+  $('#app').innerHTML = header(g) + `<main>${body}</main>` + nav();
+}
+function header(g) {
+  const banner = ui.update ? `<div class="banner"><span>${L('नया वर्ज़न', 'New version')} ${esc(ui.update.versionName || '')} ${L('उपलब्ध है', 'available')}</span><button class="btn sm" onclick="act.doUpdate()">${L('अपडेट', 'Update')}</button></div>` : '';
+  return `<header><div class="row"><select onchange="ch.group(this.value)">${db.groups.length ? db.groups.map(x => `<option value="${x.id}" ${g && x.id === g.id ? 'selected' : ''}>${esc(x.facility)}</option>`).join('') : `<option>${L('— कोई समूह नहीं —', '— No group —')}</option>`}</select><button class="ic" onclick="act.lang()">${db.settings.lang === 'hi' ? 'EN' : 'हिं'}</button></div></header>${banner}`;
+}
+function nav() {
+  const it = [['home', '🏠', L('होम', 'Home')], ['ashas', '👩', L('आशा', 'ASHAs')], ['meetings', '📋', L('बैठक', 'Meetings')], ['leaves', '🌴', L('छुट्टी', 'Leave')], ['claims', '🧾', L('क्लेम', 'Claims')], ['notices', '✉️', L('नोटिस', 'Notices')], ['reports', '📊', L('रिपोर्ट', 'Reports')], ['settings', '⚙️', L('सेटिंग', 'Settings')]];
+  return `<nav>${it.map(x => `<button class="${ui.tab === x[0] ? 'on' : ''}" onclick="act.tab('${x[0]}')"><b>${x[1]}</b>${x[2]}</button>`).join('')}</nav>`;
+}
+
+/* ====================== समूह (अस्पताल) ====================== */
+function vGroupForm() {
+  const id = ui.view.id; const g = id ? db.groups.find(x => x.id === id) : {};
+  const first = !db.groups.length;
+  return `<h2>${id ? L('समूह बदलें', 'Edit group') : L('नया समूह (अस्पताल)', 'New group (hospital)')}</h2>
+  ${first ? `<div class="card muted">${L('स्वागत है! सबसे पहले अपने अस्पताल/सेक्टर का समूह बनाएं।', 'Welcome! First create a group for your hospital/sector.')}<div style="margin-top:8px"><button class="btn sec sm" onclick="act.pickBackup()">${L('पुराना बैकअप वापस लाएं', 'Restore old backup')}</button></div></div>` : ''}
+  <div class="card">
+  ${inp('g_fac', L('अस्पताल / केंद्र का नाम *', 'Hospital / centre name *'), g.facility, 'text', 'placeholder="प्राथमिक स्वास्थ्य केंद्र सोम"')}
+  <div class="grid2">${inp('g_blk', L('ब्लॉक', 'Block'), g.block)}${inp('g_dst', L('जिला', 'District'), g.district)}</div>
+  ${inp('g_moic', L('चिकित्सा अधिकारी प्रभारी (MOIC) का नाम', 'MOIC name'), g.moic)}
+  ${inp('g_rmc', L('MOIC RMC नंबर', 'MOIC RMC no.'), g.moicRmc)}
+  ${inp('g_shs', L('सेक्टर स्वास्थ्य पर्यवेक्षक (SHS) का नाम', 'SHS name'), g.shs)}
+  <h3>${L('नियम और तारीखें', 'Rules & dates')}</h3>
+  ${inp('g_ll', L('साल भर में छुट्टी की सीमा (दिन) — 0 = कोई सीमा नहीं', 'Annual leave limit (days) — 0 = no limit'), g.leaveLimit || 0, 'number')}
+  <div class="grid2">${inp('g_cs', L('क्लेम भरना शुरू (तारीख)', 'Claim window starts (day)'), g.claimStart || 30, 'number')}${inp('g_ce', L('क्लेम की अंतिम तारीख (अगले माह)', 'Claim last day (next month)'), g.claimEnd || 5, 'number')}</div>
+  ${inp('g_sd', L('सेक्टर मीटिंग की तारीख (हर माह, 0 = तय नहीं)', 'Sector meeting day of month (0 = not set)'), g.sectorDay || 0, 'number')}
+  <div class="grid2">${inp('g_np', L('नोटिस नंबर का उपसर्ग', 'Notice no. prefix'), g.noticePrefix || 'NTC')}${inp('g_nd', L('नोटिस में उत्तर के दिन', 'Reply days in notice'), g.noticeDays || 3, 'number')}</div>
+  </div>
+  <div class="row"><button class="btn grow" onclick="act.saveGroup()">${L('सेव करें', 'Save')}</button>${db.groups.length ? `<button class="btn sec" onclick="act.cancelView()">${L('रद्द', 'Cancel')}</button>` : ''}</div>`;
+}
+
+/* ====================== होम / डैशबोर्ड ====================== */
+function vHome() {
+  const g = curGroup();
+  if (!ui.hf) ui.hf = new Date().getFullYear() + '-01-01';
+  if (!ui.ht) ui.ht = today();
+  const as = ashasOf(g);
+  const rows = as.map(a => { const p = perf(a, ui.hf, ui.ht); return [a.code, a.name, a.subcenter || '', p.present + '/' + p.total, p.absent, p.leaveDays, p.fieldAbs, p.claims, p.late]; });
+  const ms = db.meetings.filter(m => m.groupId === g.id && m.att && inRange(m.date, ui.hf, ui.ht)).length;
+  const lv = db.leaves.filter(l => l.groupId === g.id && inRange(l.from, ui.hf, ui.ht)).reduce((s, l) => s + l.days, 0);
+  const cm = defClaimMonth(today(), g);
+  const pending = as.filter(a => !db.claims.some(c => c.ashaId === a.id && c.month === cm));
+  const overdue = today() > deadline(g, cm);
+  return `<div class="stats"><div class="stat"><b>${as.length}</b><span>${L('सक्रिय आशा', 'Active ASHAs')}</span></div><div class="stat"><b>${ms}</b><span>${L('बैठकें', 'Meetings')}</span></div><div class="stat"><b>${lv}</b><span>${L('छुट्टी दिन', 'Leave days')}</span></div></div>
+  <div class="row" style="margin-bottom:10px"><button class="btn sm" onclick="act.newMeeting()">+ ${L('बैठक', 'Meeting')}</button><button class="btn sm" onclick="act.tab('leaves')">+ ${L('छुट्टी', 'Leave')}</button><button class="btn sm" onclick="act.tab('claims')">+ ${L('क्लेम', 'Claim')}</button><button class="btn sm" onclick="act.newAsha()">+ ${L('आशा', 'ASHA')}</button></div>
+  <div class="card"><b>${L('क्लेम माह', 'Claim month')} ${cm}</b> — ${L('अंतिम तारीख', 'last date')} ${fmt(deadline(g, cm))}<br>${pending.length ? `<span class="tag ${overdue ? 'bad' : ''}">${overdue ? L('देरी', 'Overdue') : L('बाकी', 'Pending')}: ${pending.length}</span> <span class="muted">${esc(pending.slice(0, 6).map(a => a.name).join(', '))}${pending.length > 6 ? '…' : ''}</span>` : `<span class="tag">${L('सबने जमा किया ✓', 'All submitted ✓')}</span>`}</div>
+  <h3>${L('आशा परफ़ॉर्मेंस', 'ASHA performance')}</h3>
+  <div class="grid2">${inp('h_f', L('से', 'From'), ui.hf, 'date', 'onchange="ch.hf(this.value)"')}${inp('h_t', L('तक', 'To'), ui.ht, 'date', 'onchange="ch.ht(this.value)"')}</div>
+  <div style="margin-top:8px">${table([L('आईडी', 'ID'), L('नाम', 'Name'), L('उप-केंद्र', 'SC'), L('उपस्थित', 'Present'), L('अनुपस्थित', 'Absent'), L('छुट्टी', 'Leave'), L('फ़ील्ड अनु.', 'Field abs.'), L('क्लेम', 'Claims'), L('देरी', 'Late')], rows)}</div>`;
+}
+
+/* ====================== आशा ====================== */
+function vAshas() {
+  const g = curGroup();
+  if (ui.view && ui.view.name === 'ashaForm') return ashaForm();
+  if (ui.view && ui.view.name === 'ashaProfile') return ashaProfile();
+  const q = (ui.q || '').toLowerCase();
+  const list = ashasOf(g, true).filter(a => !q || (a.name + a.code + (a.subcenter || '') + (a.village || '')).toLowerCase().includes(q));
+  return `<div class="row"><h2 class="grow" style="margin:0">${L('आशा सूची', 'ASHA list')} (${ashasOf(g).length})</h2><button class="btn" onclick="act.newAsha()">+ ${L('नई आशा', 'New')}</button></div>
+  <input placeholder="${L('खोजें...', 'Search...')}" value="${esc(ui.q || '')}" oninput="ch.q(this.value)" style="margin:10px 0" id="q">
+  <div class="card">${list.length ? list.map(a => `<div class="item" onclick="act.openAsha('${a.id}')"><div class="av">${a.photo ? `<img src="${a.photo}">` : esc(a.name.slice(0, 1))}</div><div class="grow"><b>${esc(a.name)}</b> ${a.status === 'inactive' ? `<span class="tag bad">${L('निष्क्रिय', 'Inactive')}</span>` : ''}<div class="muted">${a.code} • ${esc(a.subcenter || '-')} • ${esc(a.village || '')}</div></div>›</div>`).join('') : `<div class="muted">${L('अभी कोई आशा नहीं जोड़ी गई।', 'No ASHA yet.')}</div>`}</div>`;
+}
+function ashaForm() {
+  const id = ui.view.id; const a = id ? ashaById(id) : {};
+  return `<h2>${id ? L('आशा की जानकारी बदलें', 'Edit ASHA') : L('नई आशा जोड़ें', 'Add ASHA')}</h2>
+  <div class="card"><div class="row"><img class="photo" id="a_prev" src="${ui.tmpPhoto || 'data:image/gif;base64,R0lGODlhAQABAAAAACw='}"><div class="grow"><label>${L('फ़ोटो (कैमरा / गैलरी)', 'Photo (camera / gallery)')}<input type="file" accept="image/*" onchange="ch.photo(this)"></label></div></div>
+  ${inp('a_name', L('आशा का नाम *', 'ASHA name *'), a.name)}
+  ${inp('a_hus', L('पति का नाम', 'Husband name'), a.husband)}
+  ${inp('a_mob', L('मोबाइल नंबर', 'Mobile'), a.mobile, 'tel')}
+  ${inp('a_doj', L('ज्वाइनिंग की तारीख', 'Date of joining'), a.doj, 'date')}
+  <h3>${L('पहचान और बैंक', 'ID & bank')}</h3>
+  ${inp('a_aad', L('आधार नंबर', 'Aadhaar'), a.aadhaar, 'tel', 'maxlength="12"')}
+  ${inp('a_jan', L('जन आधार नंबर', 'Jan Aadhaar'), a.janAadhaar)}
+  ${inp('a_acn', L('बैंक खाते में नाम', 'Name in bank account'), a.bankAcName)}
+  ${inp('a_bank', L('बैंक का नाम', 'Bank name'), a.bank)}
+  ${inp('a_acc', L('खाता नंबर', 'Account no.'), a.account, 'tel')}
+  ${inp('a_ifsc', 'IFSC', a.ifsc)}
+  <h3>${L('पोस्टिंग', 'Posting')}</h3>
+  ${inp('a_sc', L('उप-स्वास्थ्य केंद्र', 'Sub-centre'), a.subcenter)}
+  ${inp('a_vil', L('गाँव / कार्यक्षेत्र', 'Village / work area'), a.village)}
+  ${inp('a_awc', L('आंगनवाड़ी केंद्र', 'AWC'), a.awc)}
+  <div class="grid2">${inp('a_pop', L('जनसंख्या', 'Population'), a.population || '', 'number')}${inp('a_hh', L('परिवारों की संख्या', 'Households'), a.households || '', 'number')}</div>
+  ${inp('a_anm', L('ANM का नाम', 'ANM name'), a.anm)}
+  ${inp('a_cho', L('CHO का नाम', 'CHO name'), a.cho)}</div>
+  <div class="row"><button class="btn grow" onclick="act.saveAsha()">${L('सेव करें', 'Save')}</button><button class="btn sec" onclick="act.cancelView()">${L('रद्द', 'Cancel')}</button></div>`;
+}
+function ashaProfile() {
+  const a = ashaById(ui.view.id); if (!a) { ui.view = null; return vAshas(); }
+  const y = new Date().getFullYear(); const p = perf(a, y + '-01-01', y + '-12-31'); const g = curGroup();
+  const lv = db.leaves.filter(l => l.ashaId === a.id).sort((x, z) => z.from.localeCompare(x.from));
+  const cl = db.claims.filter(c => c.ashaId === a.id).sort((x, z) => z.month.localeCompare(x.month));
+  const nt = db.notices.filter(n => n.ashaId === a.id);
+  const f = (k, val) => val ? `<tr><th>${k}</th><td>${esc(val)}</td></tr>` : '';
+  return `<div class="row"><button class="btn sec sm" onclick="act.cancelView()">‹ ${L('वापस', 'Back')}</button><div class="grow"></div><button class="btn sm" onclick="act.editAsha('${a.id}')">${L('बदलें', 'Edit')}</button></div>
+  <div class="card" style="margin-top:10px"><div class="row"><img class="photo" src="${a.photo || 'data:image/gif;base64,R0lGODlhAQABAAAAACw='}"><div><b style="font-size:17px">${esc(a.name)}</b><div class="muted">${a.code} ${a.status === 'inactive' ? `• <span class="tag bad">${L('निष्क्रिय', 'Inactive')}</span>` : ''}</div></div></div>
+  <table style="margin-top:10px">${f(L('पति', 'Husband'), a.husband)}${f(L('मोबाइल', 'Mobile'), a.mobile)}${f(L('ज्वाइनिंग', 'Joined'), fmt(a.doj))}${f(L('आधार', 'Aadhaar'), a.aadhaar)}${f(L('जन आधार', 'Jan Aadhaar'), a.janAadhaar)}${f(L('खाते में नाम', 'Account name'), a.bankAcName)}${f(L('बैंक', 'Bank'), a.bank)}${f(L('खाता नंबर', 'Account'), a.account)}${f('IFSC', a.ifsc)}${f(L('उप-केंद्र', 'Sub-centre'), a.subcenter)}${f(L('गाँव', 'Village'), a.village)}${f('AWC', a.awc)}${f(L('जनसंख्या', 'Population'), a.population)}${f(L('परिवार', 'Households'), a.households)}${f('ANM', a.anm)}${f('CHO', a.cho)}${f(L('समूह', 'Group'), g.facility)}</table></div>
+  <h3>${y} — ${L('सारांश', 'Summary')}</h3>
+  <div class="stats"><div class="stat"><b>${p.present}/${p.total}</b><span>${L('बैठक उपस्थिति', 'Meetings')}</span></div><div class="stat"><b>${p.absent}</b><span>${L('अनुपस्थित', 'Absent')}</span></div><div class="stat"><b>${leaveUsed(a.id, y)}${g.leaveLimit ? '/' + g.leaveLimit : ''}</b><span>${L('छुट्टी दिन', 'Leave days')}</span></div></div>
+  <div class="row" style="margin-bottom:8px"><button class="btn sm" onclick="act.fieldAbs('${a.id}')">${L('फ़ील्ड में अनुपस्थित दर्ज करें', 'Record field absence')}</button><button class="btn sm sec" onclick="act.noticeFor('${a.id}')">${L('नोटिस बनाएं', 'Make notice')}</button></div>
+  <h3>${L('छुट्टी इतिहास', 'Leave history')}</h3>${table([L('से', 'From'), L('तक', 'To'), L('दिन', 'Days'), L('कारण', 'Reason')], lv.map(l => [fmt(l.from), fmt(l.to), l.days, l.reason || '']))}
+  <h3>${L('क्लेम जमा', 'Claims')}</h3>${table([L('माह', 'Month'), L('जमा तारीख', 'Date'), L('स्थिति', 'Status')], cl.map(c => [c.month, fmt(c.date), isLate(c) ? L('देरी से', 'Late') : L('समय पर', 'On time')]))}
+  <h3>${L('फ़ील्ड अनुपस्थिति', 'Field absences')}</h3>${table([L('तारीख', 'Date'), L('टिप्पणी', 'Note')], db.absences.filter(x => x.ashaId === a.id).map(x => [fmt(x.date), x.note || '']))}
+  <h3>${L('नोटिस', 'Notices')}</h3>${table([L('नंबर', 'No.'), L('तारीख', 'Date')], nt.map(n => [n.no, fmt(n.date)]))}
+  <div class="row" style="margin-top:14px"><button class="btn sec sm" onclick="act.toggleAsha('${a.id}')">${a.status === 'inactive' ? L('फिर सक्रिय करें', 'Reactivate') : L('निष्क्रिय करें (तबादला/इस्तीफ़ा)', 'Deactivate')}</button><button class="btn red sm" onclick="act.delAsha('${a.id}')">${L('हटाएं', 'Delete')}</button></div>`;
+}
+
+/* ====================== बैठक और उपस्थिति ====================== */
+function vMeetings() {
+  const g = curGroup();
+  if (ui.view && ui.view.name === 'meetingForm') return meetingForm();
+  if (ui.view && ui.view.name === 'attend') return vAttend();
+  const list = db.meetings.filter(m => m.groupId === g.id).sort((a, b) => b.date.localeCompare(a.date));
+  return `<div class="row"><h2 class="grow" style="margin:0">${L('बैठकें / ट्रेनिंग', 'Meetings / Training')}</h2><button class="btn" onclick="act.newMeeting()">+ ${L('नई', 'New')}</button></div>
+  <div class="card" style="margin-top:10px">${list.length ? list.map(m => { const pr = m.att ? Object.values(m.att).filter(x => x.p).length : 0; const tot = m.att ? Object.keys(m.att).length : 0; return `<div class="item" onclick="act.openMeeting('${m.id}')"><div class="grow"><b>${esc(mTitle(m))}</b><div class="muted">${fmt(m.date)} • ${esc(m.start || '')}${m.end ? '–' + esc(m.end) : ''}</div></div>${m.att ? `<span class="tag">${pr}/${tot}</span>` : `<span class="tag bad">${L('उपस्थिति बाकी', 'Pending')}</span>`}</div>`; }).join('') : `<div class="muted">${L('अभी कोई बैठक नहीं बनी।', 'No meetings yet.')}</div>`}</div>`;
+}
+function meetingForm() {
+  const g = curGroup(); const id = ui.view.id; const m = id ? db.meetings.find(x => x.id === id) : {};
+  let d = m.date || today();
+  if (!id && g.sectorDay) { const n = new Date(); d = ymd(new Date(n.getFullYear(), n.getMonth(), g.sectorDay)); }
+  return `<h2>${id ? L('बैठक बदलें', 'Edit meeting') : L('नई बैठक / ट्रेनिंग', 'New meeting / training')}</h2><div class="card">
+  ${sel('m_type', L('प्रकार', 'Type'), mTypes(), m.type || 'sector')}
+  ${inp('m_name', L('नाम (ट्रेनिंग / रिव्यू आदि का नाम)', 'Name (training / review name)'), m.name)}
+  ${inp('m_date', L('तारीख', 'Date'), d, 'date')}
+  <div class="grid2">${inp('m_st', L('शुरू समय', 'Start time'), m.start || '10:00', 'time')}${inp('m_en', L('खत्म समय', 'End time'), m.end || '16:00', 'time')}</div></div>
+  <div class="row"><button class="btn grow" onclick="act.saveMeeting()">${L('सेव करें और उपस्थिति लगाएं', 'Save & mark attendance')}</button><button class="btn sec" onclick="act.cancelView()">${L('रद्द', 'Cancel')}</button></div>`;
+}
+function vAttend() {
+  const g = curGroup(); const m = db.meetings.find(x => x.id === ui.view.id); if (!m) { ui.view = null; return vMeetings(); }
+  const list = ashasOf(g).filter(a => !a.doj || a.doj <= m.date);
+  if (!ui.att || ui.att.mid !== m.id) {
+    ui.att = { mid: m.id, claimMonth: defClaimMonth(m.date, g), rows: {} };
+    list.forEach(a => { const e = m.att && m.att[a.id]; ui.att.rows[a.id] = { p: e ? e.p : false, in: (e && e.in) || m.start || '', out: (e && e.out) || m.end || '', claim: db.claims.some(c => c.ashaId === a.id && c.meetingId === m.id) }; });
+  }
+  const R = ui.att.rows; const pc = list.filter(a => R[a.id] && R[a.id].p).length;
+  return `<div class="row"><button class="btn sec sm" onclick="act.cancelView()">‹ ${L('वापस', 'Back')}</button><div class="grow"></div><button class="btn sec sm" onclick="act.editMeeting('${m.id}')">${L('बैठक बदलें', 'Edit')}</button><button class="btn red sm" onclick="act.delMeeting('${m.id}')">${L('हटाएं', 'Delete')}</button></div>
+  <div class="card" style="margin-top:10px"><b>${esc(mTitle(m))}</b><div class="muted">${fmt(m.date)} • ${esc(m.start || '')}–${esc(m.end || '')}</div></div>
+  <div class="row" style="margin-bottom:8px"><button class="btn sm" onclick="act.allAtt(true)">${L('सभी उपस्थित', 'All present')}</button><button class="btn sm sec" onclick="act.allAtt(false)">${L('सभी अनुपस्थित', 'All absent')}</button><div class="grow"></div><span class="tag">${pc} ${L('उपस्थित', 'P')} / ${list.length - pc} ${L('अनुपस्थित', 'A')}</span></div>
+  <label>${L('क्लेम फ़ॉर्म किस माह का (जमा करने पर)', 'Claim month (if submitted today)')}<input type="month" value="${ui.att.claimMonth}" onchange="ui.att.claimMonth=this.value"></label>
+  <div class="card" style="margin-top:8px">${list.map(a => { const r = R[a.id]; return `<div class="item" style="flex-wrap:wrap"><input type="checkbox" ${r.p ? 'checked' : ''} onchange="ch.tick('${a.id}',this.checked)"><div class="grow"><b>${esc(a.name)}</b><div class="muted">${a.code} • ${esc(a.subcenter || '')}</div></div><span class="tag ${r.p ? '' : 'bad'}">${r.p ? L('उपस्थित', 'Present') : L('अनुपस्थित', 'Absent')}</span>${r.p ? `<div class="row" style="width:100%;margin-top:6px"><label style="margin:0;flex:1">${L('आई', 'In')}<input type="time" value="${r.in}" onchange="ui.att.rows['${a.id}'].in=this.value"></label><label style="margin:0;flex:1">${L('गई', 'Out')}<input type="time" value="${r.out}" onchange="ui.att.rows['${a.id}'].out=this.value"></label><label style="margin:0;display:flex;gap:6px;align-items:center;margin-top:16px"><input type="checkbox" ${r.claim ? 'checked' : ''} onchange="ui.att.rows['${a.id}'].claim=this.checked">${L('क्लेम जमा', 'Claim')}</label></div>` : ''}</div>`; }).join('')}</div>
+  <button class="btn" style="width:100%" onclick="act.saveAtt()">${L('उपस्थिति सेव करें', 'Save attendance')}</button>`;
+}
+
+/* ====================== छुट्टी ====================== */
+function vLeaves() {
+  const g = curGroup(); const as = ashasOf(g);
+  const sid = ui.leaveSel || (as[0] && as[0].id) || '';
+  const a = ashaById(sid); const y = new Date().getFullYear();
+  const fy = ui.lvFilter || 'all';
+  const hist = db.leaves.filter(l => l.groupId === g.id && (fy === 'all' || l.ashaId === fy)).sort((x, z) => z.from.localeCompare(x.from));
+  return `<h2>${L('छुट्टी दर्ज करें', 'Record leave')}</h2><div class="card">
+  ${sel('l_asha', L('आशा', 'ASHA'), as.map(x => [x.id, x.code + ' — ' + x.name]), sid, 'onchange="ch.leaveAsha(this.value)"')}
+  ${a ? `<div class="muted" style="margin-top:6px">${y}: ${L('ली गई', 'used')} <b>${leaveUsed(a.id, y)}</b> ${g.leaveLimit ? L('/ सीमा ', '/ limit ') + g.leaveLimit + ' ' + L('दिन', 'days') + ' — ' + L('बची', 'left') + ' <b>' + Math.max(0, g.leaveLimit - leaveUsed(a.id, y)) + '</b>' : L('(सीमा तय नहीं)', '(no limit set)')}</div>` : ''}
+  <div class="grid2">${inp('l_from', L('से', 'From'), today(), 'date', 'onchange="ch.days()"')}${inp('l_to', L('तक', 'To'), today(), 'date', 'onchange="ch.days()"')}</div>
+  <div class="muted" style="margin-top:6px">${L('कुल दिन', 'Total days')}: <b id="l_days">1</b></div>
+  ${inp('l_rs', L('कारण', 'Reason'), '')}
+  <label>${L('आवेदन की फ़ोटो (कैमरा / गैलरी)', 'Application photo (camera / gallery)')}<input type="file" accept="image/*" onchange="ch.leaveFile(this)"></label><div class="muted" id="l_att"></div></div>
+  <button class="btn" style="width:100%" onclick="act.saveLeave()">${L('छुट्टी सेव करें', 'Save leave')}</button>
+  <h3>${L('छुट्टी इतिहास', 'Leave history')}</h3>
+  ${sel('l_flt', L('फ़िल्टर', 'Filter'), [['all', L('सभी आशा', 'All ASHAs')]].concat(as.map(x => [x.id, x.name])), fy, 'onchange="ch.lvFilter(this.value)"')}
+  <div class="card" style="margin-top:8px">${hist.length ? hist.map(l => `<div class="item"><div class="grow"><b>${esc(aName(l.ashaId))}</b><div class="muted">${fmt(l.from)} – ${fmt(l.to)} • ${l.days} ${L('दिन', 'days')}${l.reason ? ' • ' + esc(l.reason) : ''}</div></div>${l.attach ? `<button class="btn sm sec" onclick="act.viewAttach('${l.id}')">📎</button>` : ''}<button class="btn sm red" onclick="act.delLeave('${l.id}')">✕</button></div>`).join('') : `<div class="muted">${L('कोई रिकॉर्ड नहीं', 'No records')}</div>`}</div>`;
+}
+
+/* ====================== क्लेम फ़ॉर्म / हाजिरी ====================== */
+function vClaims() {
+  const g = curGroup(); const as = ashasOf(g);
+  const cm = ui.claimMonth || defClaimMonth(today(), g);
+  const dl = deadline(g, cm);
+  const rows = as.map(a => { const c = db.claims.find(x => x.ashaId === a.id && x.month === cm); return { a, c }; });
+  const [yy, mm] = cm.split('-').map(Number);
+  const startD = fmt(ymd(new Date(yy, mm - 1, Math.min(g.claimStart || 30, new Date(yy, mm, 0).getDate()))));
+  return `<h2>${L('क्लेम फ़ॉर्म / हाजिरी जमा', 'Claim form / attendance submission')}</h2><div class="card">
+  <label>${L('किस माह का क्लेम', 'Claim month')}<input type="month" id="c_m" value="${cm}" onchange="ch.claimMonth(this.value)"></label>
+  <div class="muted" style="margin-top:6px">${L('जमा करने की अवधि', 'Window')}: ${startD} – ${fmt(dl)} ${L('(अंतिम तारीख)', '(last date)')}</div>
+  ${inp('c_d', L('जमा करने की तारीख (बल्क के लिए)', 'Submission date (for bulk)'), today(), 'date')}</div>
+  <div class="row" style="margin-bottom:8px"><button class="btn sm" onclick="act.claimAll(true)">${L('सभी चुनें', 'Select all')}</button><button class="btn sm sec" onclick="act.claimAll(false)">${L('कोई नहीं', 'None')}</button><div class="grow"></div><button class="btn sm" onclick="act.saveClaimBulk()">${L('चुने हुओं की तारीख सेव करें', 'Save selected')}</button></div>
+  <div class="card">${rows.map(({ a, c }) => `<div class="item" style="flex-wrap:wrap"><input type="checkbox" class="cb" data-id="${a.id}" ${c ? 'disabled' : ''}><div class="grow"><b>${esc(a.name)}</b><div class="muted">${a.code} • ${esc(a.subcenter || '')}</div></div>${c ? `<span class="tag ${isLate(c) ? 'bad' : ''}">${fmt(c.date)} ${isLate(c) ? L('देरी', 'Late') : '✓'}</span><button class="btn sm red" onclick="act.delClaim('${c.id}')">✕</button>` : `<span class="tag bad">${L('बाकी', 'Pending')}</span><input type="date" id="cd_${a.id}" value="${today()}" style="width:140px"><button class="btn sm" onclick="act.saveClaimOne('${a.id}')">${L('सेव', 'Save')}</button>`}</div>`).join('')}</div>`;
+}
+
+/* ====================== नोटिस ====================== */
+function vNotices() {
+  const g = curGroup(); const as = ashasOf(g);
+  const sid = ui.nAsha || (as[0] && as[0].id) || '';
+  const rt = ui.nType || 'meeting';
+  const absM = db.meetings.filter(m => m.groupId === g.id && m.att && m.att[sid] && !m.att[sid].p).sort((a, b) => b.date.localeCompare(a.date));
+  let extra = '';
+  if (rt === 'meeting') extra = absM.length ? sel('n_meet', L('कौन सी बैठक में अनुपस्थित', 'Which meeting'), absM.map(m => [m.id, fmt(m.date) + ' — ' + mTitle(m)]), ui.nMeet) : `<div class="muted" style="margin-top:8px">${L('इस आशा की कोई अनुपस्थिति दर्ज नहीं है।', 'No recorded absence for this ASHA.')}</div>`;
+  if (rt === 'claim') extra = inp('n_month', L('किस माह का क्लेम', 'Claim month'), defClaimMonth(today(), g), 'month');
+  if (rt === 'field') extra = inp('n_fdate', L('फ़ील्ड में अनुपस्थिति की तारीख', 'Field absence date'), today(), 'date');
+  if (rt === 'custom') extra = `<label>${L('कारण लिखें', 'Write reason')}<textarea id="n_custom" rows="3"></textarea></label>`;
+  const notes = db.notices.filter(n => n.groupId === g.id).sort((a, b) => b.date.localeCompare(a.date) || b.no.localeCompare(a.no));
+  return `<h2>${L('कारण बताओ नोटिस', 'Show-cause notice')}</h2><div class="card">
+  ${sel('n_asha', L('किस आशा को', 'To which ASHA'), as.map(x => [x.id, x.code + ' — ' + x.name]), sid, 'onchange="ch.nAsha(this.value)"')}
+  ${sel('n_type', L('कारण', 'Reason'), [['meeting', L('बैठक में अनुपस्थिति', 'Meeting absence')], ['claim', L('क्लेम फ़ॉर्म/हाजिरी में देरी', 'Delay in claim form')], ['field', L('फ़ील्ड में अनुपस्थित', 'Absent in field')], ['custom', L('अन्य कारण (खुद लिखें)', 'Other (write)')]], rt, 'onchange="ch.nType(this.value)"')}
+  ${extra}
+  ${sel('n_lang', L('नोटिस की भाषा', 'Notice language'), [['hi', 'हिंदी'], ['en', 'English']], ui.nLang || db.settings.lang)}
+  <button class="btn" style="width:100%;margin-top:12px" onclick="act.genNotice()">${L('नोटिस बनाएं', 'Generate notice')}</button></div>
+  ${ui.draft ? `<h3>${L('नोटिस पूर्वावलोकन', 'Preview')}</h3>${ui.draft.html}<div class="row" style="margin-top:8px"><button class="btn" onclick="act.saveNotice()">${ui.draft.saved ? L('सेव हो चुका ✓', 'Saved ✓') : L('सेव करें', 'Save')}</button><button class="btn sec" onclick="act.printNotice()">${L('प्रिंट / PDF', 'Print / PDF')}</button><button class="btn sec" onclick="act.shareNotice('com.whatsapp')">WhatsApp</button><button class="btn sec" onclick="act.shareNotice('')">${L('शेयर', 'Share')}</button></div>` : ''}
+  <h3>${L('जारी किए गए नोटिस', 'Issued notices')}</h3><div class="card">${notes.length ? notes.map(n => `<div class="item" onclick="act.openNotice('${n.id}')"><div class="grow"><b>${esc(aName(n.ashaId))}</b><div class="muted">${esc(n.no)} • ${fmt(n.date)}</div></div>›</div>`).join('') : `<div class="muted">${L('कोई नोटिस नहीं', 'No notices')}</div>`}</div>`;
+}
+function mkNotice(g, a, type, p, lang, no, date) {
+  const hi = lang !== 'en'; const fac = g.facility; let subj, body;
+  if (type === 'meeting') {
+    const m = db.meetings.find(x => x.id === p.meetingId); const t = mTitle(m, lang);
+    subj = hi ? `${t} में अनुपस्थित रहने के संबंध में स्पष्टीकरण।` : `Explanation regarding absence from ${t}.`;
+    body = hi ? `उपरोक्त विषयांतर्गत लेख है कि दिनांक ${fmt(m.date)} को ${fac} में आयोजित ${t} में आपकी अनुपस्थिति बिना किसी पूर्व सूचना के दर्ज की गई है।` : `It is noted that you were absent without prior intimation from the ${t} held at ${fac} on ${fmt(m.date)}.`;
+  } else if (type === 'claim') {
+    const c = db.claims.find(x => x.ashaId === a.id && x.month === p.month); const dl = fmt(deadline(g, p.month));
+    subj = hi ? 'क्लेम फॉर्म / हाजिरी समय पर जमा न करने के संबंध में स्पष्टीकरण।' : 'Explanation regarding delay in submitting claim form / attendance.';
+    body = hi ? `उपरोक्त विषयांतर्गत लेख है कि माह ${p.month} का क्लेम फॉर्म एवं हाजिरी निर्धारित अंतिम तिथि ${dl} तक ${c ? 'जमा नहीं की गई (दिनांक ' + fmt(c.date) + ' को देरी से जमा हुई)' : 'जमा नहीं की गई है'}।` : `It is noted that the claim form and attendance for ${p.month} ${c ? 'was submitted late on ' + fmt(c.date) : 'has not been submitted'} against the last date ${dl}.`;
+  } else if (type === 'field') {
+    subj = hi ? 'क्षेत्र निरीक्षण के दौरान अनुपस्थित पाए जाने के संबंध में स्पष्टीकरण।' : 'Explanation regarding absence found during field inspection.';
+    body = hi ? `उपरोक्त विषयांतर्गत लेख है कि दिनांक ${fmt(p.date)} को क्षेत्र निरीक्षण के दौरान आप अपने कार्यक्षेत्र में अनुपस्थित पाई गईं।` : `It is noted that you were found absent from your work area during the field inspection on ${fmt(p.date)}.`;
+  } else {
+    subj = hi ? 'स्पष्टीकरण प्रस्तुत करने के संबंध में।' : 'Regarding submission of explanation.';
+    body = (hi ? 'उपरोक्त विषयांतर्गत लेख है कि ' : 'It is noted that ') + esc(p.text || '');
+  }
+  const ask2 = hi ? `अतः आपको निर्देशित किया जाता है कि पत्र प्राप्ति के ${g.noticeDays || 3} दिवस के भीतर अपना लिखित स्पष्टीकरण अधोहस्ताक्षरी के समक्ष प्रस्तुत करें। समय पर स्पष्टीकरण प्रस्तुत न करने की स्थिति में आपके विरुद्ध नियमानुसार प्रशासनिक कार्रवाई अमल में लाई जावेगी।` : `You are therefore directed to submit your written explanation to the undersigned within ${g.noticeDays || 3} days of receipt of this letter. Failing this, administrative action will be taken against you as per rules.`;
+  const html = `<div class="notice"><div class="c b">${hi ? 'कार्यालय ' : 'Office of '}${esc(fac)}</div><div class="c">${hi ? 'ब्लॉक-' : 'Block: '}${esc(g.block || '')}, ${hi ? 'जिला-' : 'District: '}${esc(g.district || '')}</div><hr>
+<div class="split"><span>${hi ? 'क्रमांक' : 'No.'}: ${esc(no)}</span><span>${hi ? 'दिनांक' : 'Date'}: ${fmt(date)}</span></div>
+<p>${hi ? 'प्रति,' : 'To,'}<br>${hi ? 'श्रीमती ' : 'Smt. '}${esc(a.name)} (${hi ? 'आशा सहयोगिनी' : 'ASHA Sahyogini'})<br>${hi ? 'आशा आईडी' : 'ASHA ID'}: ${esc(a.code)}, ${hi ? 'गाँव/क्षेत्र' : 'Village/area'}: ${esc(a.village || '')}<br>${hi ? 'उप-स्वास्थ्य केंद्र' : 'Sub-centre'}: ${esc(a.subcenter || '')}, ${esc(fac)}</p>
+<p><b>${hi ? 'विषय' : 'Subject'}:</b> ${subj}</p><p>${hi ? 'महोदया,' : 'Madam,'}</p><p>${body}</p><p>${ask2}</p>
+<div class="sign"><div>${hi ? 'चिकित्सा अधिकारी प्रभारी (MOIC)' : 'Medical Officer In-Charge (MOIC)'}<br>${esc(g.moic || '')}<br>${esc(fac)}</div>${g.shs ? `<div>${hi ? 'सेक्टर स्वास्थ्य पर्यवेक्षक (SHS)' : 'Sector Health Supervisor (SHS)'}<br>${esc(g.shs)}<br>${esc(fac)}</div>` : ''}</div></div>`;
+  return { html, subj };
+}
+
+/* ====================== रिपोर्ट ====================== */
+function vReports() {
+  const g = curGroup(); const as = ashasOf(g, true); const r = ui.rep || { type: 'perf', asha: 'all', f: new Date().getFullYear() + '-01-01', t: today() };
+  ui.rep = r;
+  return `<h2>${L('रिपोर्ट', 'Reports')}</h2><div class="card">
+  ${sel('r_type', L('रिपोर्ट का प्रकार', 'Report type'), [['perf', L('आशा परफ़ॉर्मेंस सारांश', 'Performance summary')], ['att', L('बैठक उपस्थिति', 'Meeting attendance')], ['leave', L('छुट्टी', 'Leave')], ['claim', L('क्लेम फ़ॉर्म जमा', 'Claim submissions')], ['field', L('फ़ील्ड अनुपस्थिति', 'Field absences')], ['asha', L('आशा सूची (पूरी जानकारी)', 'ASHA list (full details)')]], r.type, 'onchange="ch.rep(\'type\',this.value)"')}
+  ${sel('r_asha', L('आशा', 'ASHA'), [['all', L('सभी आशा', 'All ASHAs')]].concat(as.map(x => [x.id, x.code + ' — ' + x.name])), r.asha, 'onchange="ch.rep(\'asha\',this.value)"')}
+  <div class="grid2">${inp('r_f', L('किस तारीख से', 'From'), r.f, 'date', 'onchange="ch.rep(\'f\',this.value)"')}${inp('r_t', L('किस तारीख तक', 'To'), r.t, 'date', 'onchange="ch.rep(\'t\',this.value)"')}</div></div>
+  <div class="row" style="margin-bottom:10px"><button class="btn sm" onclick="act.repPrint()">🖨 ${L('प्रिंट / PDF', 'Print / PDF')}</button><button class="btn sm" onclick="act.repFile('xls',false)">Excel ⬇</button><button class="btn sm" onclick="act.repFile('doc',false)">Word ⬇</button><button class="btn sm sec" onclick="act.repFile('xls',true)">Excel ${L('शेयर', 'share')}</button><button class="btn sm sec" onclick="act.repFile('doc',true)">Word ${L('शेयर', 'share')}</button><button class="btn sm sec" onclick="act.repText('com.whatsapp')">WhatsApp</button><button class="btn sm sec" onclick="act.repSms()">SMS</button></div>
+  ${(() => { const R = buildReport(); return `<h3>${esc(R.title)}</h3>${table(R.headers, R.rows)}`; })()}`;
+}
+function buildReport() {
+  const g = curGroup(); const r = ui.rep; const all = ashasOf(g, true);
+  const as = all.filter(a => r.asha === 'all' || a.id === r.asha); const ids = as.map(a => a.id);
+  const range = `${fmt(r.f)} – ${fmt(r.t)}`; let title, headers, rows;
+  const stat = b => b ? L('उपस्थित', 'Present') : L('अनुपस्थित', 'Absent');
+  if (r.type === 'att') {
+    title = L('बैठक उपस्थिति रिपोर्ट', 'Meeting attendance report');
+    headers = [L('तारीख', 'Date'), L('बैठक', 'Meeting'), L('आशा', 'ASHA'), L('स्थिति', 'Status'), L('आई', 'In'), L('गई', 'Out')]; rows = [];
+    db.meetings.filter(m => m.groupId === g.id && m.att && inRange(m.date, r.f, r.t)).sort((a, b) => a.date.localeCompare(b.date)).forEach(m => as.forEach(a => { const e = m.att[a.id]; if (e) rows.push([fmt(m.date), mTitle(m), a.name, stat(e.p), e.in || '', e.out || '']); }));
+  } else if (r.type === 'leave') {
+    title = L('छुट्टी रिपोर्ट', 'Leave report'); headers = [L('आशा', 'ASHA'), L('से', 'From'), L('तक', 'To'), L('दिन', 'Days'), L('कारण', 'Reason')];
+    rows = db.leaves.filter(l => ids.includes(l.ashaId) && inRange(l.from, r.f, r.t)).sort((a, b) => a.from.localeCompare(b.from)).map(l => [aName(l.ashaId), fmt(l.from), fmt(l.to), l.days, l.reason || '']);
+    if (rows.length) rows.push([L('कुल', 'Total'), '', '', rows.reduce((s, x) => s + x[3], 0), '']);
+  } else if (r.type === 'claim') {
+    title = L('क्लेम फ़ॉर्म / हाजिरी जमा रिपोर्ट', 'Claim submission report'); headers = [L('आशा', 'ASHA'), L('माह', 'Month'), L('जमा तारीख', 'Date'), L('स्थिति', 'Status')];
+    rows = db.claims.filter(c => ids.includes(c.ashaId) && inRange(c.date, r.f, r.t)).sort((a, b) => a.date.localeCompare(b.date)).map(c => [aName(c.ashaId), c.month, fmt(c.date), isLate(c) ? L('देरी से', 'Late') : L('समय पर', 'On time')]);
+  } else if (r.type === 'field') {
+    title = L('फ़ील्ड अनुपस्थिति रिपोर्ट', 'Field absence report'); headers = [L('आशा', 'ASHA'), L('तारीख', 'Date'), L('टिप्पणी', 'Note')];
+    rows = db.absences.filter(x => ids.includes(x.ashaId) && inRange(x.date, r.f, r.t)).sort((a, b) => a.date.localeCompare(b.date)).map(x => [aName(x.ashaId), fmt(x.date), x.note || '']);
+  } else if (r.type === 'asha') {
+    title = L('आशा सूची', 'ASHA list'); headers = [L('आईडी', 'ID'), L('नाम', 'Name'), L('पति', 'Husband'), L('मोबाइल', 'Mobile'), L('आधार', 'Aadhaar'), L('बैंक', 'Bank'), 'IFSC', L('उप-केंद्र', 'SC'), L('गाँव', 'Village'), L('जनसंख्या', 'Pop.'), 'ANM', 'CHO', L('ज्वाइनिंग', 'DOJ')];
+    rows = as.map(a => [a.code, a.name, a.husband || '', a.mobile || '', maskAad(a.aadhaar), a.bank || '', a.ifsc || '', a.subcenter || '', a.village || '', a.population || '', a.anm || '', a.cho || '', fmt(a.doj)]);
+  } else {
+    title = L('आशा परफ़ॉर्मेंस सारांश', 'ASHA performance summary'); headers = [L('आईडी', 'ID'), L('नाम', 'Name'), L('उप-केंद्र', 'SC'), L('बैठकें', 'Meetings'), L('उपस्थित', 'Present'), L('अनुपस्थित', 'Absent'), L('छुट्टी दिन', 'Leave days'), L('फ़ील्ड अनु.', 'Field abs.'), L('क्लेम', 'Claims'), L('देरी', 'Late')];
+    rows = as.map(a => { const p = perf(a, r.f, r.t); return [a.code, a.name, a.subcenter || '', p.total, p.present, p.absent, p.leaveDays, p.fieldAbs, p.claims, p.late]; });
+  }
+  return { title: `${g.facility} — ${title} (${range})`, headers, rows };
+}
+
+/* ====================== सेटिंग ====================== */
+function vSettings() {
+  const ver = A ? (A.getVersionName() + ' (' + A.getVersionCode() + ')') : L('(ब्राउज़र टेस्ट)', '(browser test)');
+  return `<h2>${L('सेटिंग', 'Settings')}</h2>
+  <div class="card"><b>${L('समूह (अस्पताल)', 'Groups (hospitals)')}</b>${db.groups.map(x => `<div class="item"><div class="grow"><b>${esc(x.facility)}</b><div class="muted">${L('आशा', 'ASHAs')}: ${ashasOf(x).length} • ${L('छुट्टी सीमा', 'Leave limit')}: ${x.leaveLimit || '-'}</div></div><button class="btn sm sec" onclick="act.editGroup('${x.id}')">${L('बदलें', 'Edit')}</button><button class="btn sm red" onclick="act.delGroup('${x.id}')">✕</button></div>`).join('') || `<div class="muted">${L('कोई समूह नहीं', 'No groups')}</div>`}<div style="margin-top:8px"><button class="btn sm" onclick="act.newGroup()">+ ${L('नया समूह', 'New group')}</button></div></div>
+  <div class="card"><b>${L('बैकअप', 'Backup')}</b><div class="muted" style="margin:6px 0">${L('हर बदलाव के बाद ऐप अपने-आप फ़ोन के Documents/AshaManagement फ़ोल्डर में बैकअप रखता है।', 'After every change the app auto-saves a backup in Documents/AshaManagement.')}</div>
+  <div class="row"><button class="btn sm" onclick="act.backupNow()">${L('अभी बैकअप लें', 'Backup now')}</button><button class="btn sm sec" onclick="act.pickBackup()">${L('बैकअप से वापस लाएं', 'Restore')}</button><button class="btn sm sec" onclick="act.shareBackup()">${L('Drive / WhatsApp पर भेजें', 'Send to Drive / WhatsApp')}</button></div></div>
+  <div class="card"><b>${L('ऐप अपडेट', 'App update')}</b><div class="muted" style="margin:6px 0">${L('वर्ज़न', 'Version')}: ${esc(ver)}</div>
+  ${inp('s_url', L('अपडेट लिंक (version.json का पता)', 'Update link (version.json URL)'), db.settings.updateUrl, 'url', 'onchange="ch.updUrl(this.value)" placeholder="https://github.com/.../releases/latest/download/version.json"')}
+  <div style="margin-top:8px"><button class="btn sm" onclick="act.checkUpdate(true)">${L('अपडेट जांचें', 'Check for update')}</button></div></div>
+  <div class="card"><b>${L('भाषा', 'Language')}</b><div class="row" style="margin-top:6px"><button class="btn sm ${db.settings.lang === 'hi' ? '' : 'sec'}" onclick="act.lang('hi')">हिंदी</button><button class="btn sm ${db.settings.lang === 'en' ? '' : 'sec'}" onclick="act.lang('en')">English</button></div></div>`;
+}
+
+/* ====================== रिपोर्ट/फ़ाइल निर्यात ====================== */
+const b64 = s => btoa(unescape(encodeURIComponent(s)));
+function reportHtml(R) {
+  return `<h3>${esc(R.title)}</h3><table border="1" cellpadding="4" style="border-collapse:collapse;font-size:12px"><tr>${R.headers.map(h => `<th style="background:#e6f4ec">${esc(h)}</th>`).join('')}</tr>${R.rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</table>`;
+}
+const docWrap = (inner, extra) => `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"><style>@page{size:A4;margin:12mm}body{font-family:sans-serif;font-size:13px}table{border-collapse:collapse}th,td{border:1px solid #888;padding:4px 6px;text-align:left}.notice{padding:10px;line-height:1.7}.c{text-align:center}.b{font-weight:bold;font-size:16px}.split{display:flex;justify-content:space-between}.sign{display:flex;justify-content:space-between;margin-top:40px;text-align:center}</style>${extra || ''}</head><body>${inner}</body></html>`;
+function outFile(name, mime, content, share, pkg) {
+  if (A) { share ? A.shareFile(name, mime, b64(content), pkg || '') : A.saveFile(name, mime, b64(content)); }
+  else { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type: mime })); a.download = name; a.click(); }
+}
+function outPrint(title, inner) {
+  const html = docWrap(inner);
+  if (A) A.printHtml(title, html);
+  else { const w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close(); w.print(); } }
+}
+function outText(text, pkg) { if (A) A.shareText(text, pkg || ''); else { try { navigator.clipboard.writeText(text); } catch (e) {} toast(L('टेक्स्ट कॉपी हुआ', 'Text copied')); } }
+function reportText(R) { return R.title + '\n\n' + R.rows.map((r, i) => (i + 1) + '. ' + r.join(' | ')).join('\n'); }
+
+/* ====================== change-हैंडलर (inline onchange) ====================== */
+const ch = {
+  group(id) { ui.gid = id; ui.view = null; ui.att = null; ui.leaveSel = null; ui.nAsha = null; render(); },
+  hf(x) { ui.hf = x; render(); }, ht(x) { ui.ht = x; render(); },
+  q(x) { ui.q = x; const pos = x.length; render(); const e = $('#q'); if (e) { e.focus(); e.setSelectionRange(pos, pos); } },
+  async photo(el) { if (el.files[0]) { ui.tmpPhoto = await compressImage(el.files[0], 360, 0.7); $('#a_prev').src = ui.tmpPhoto; } },
+  tick(id, c) { const r = ui.att.rows[id]; r.p = c; if (!c) r.claim = false; render(); },
+  leaveAsha(x) { ui.leaveSel = x; render(); },
+  days() { $('#l_days').textContent = Math.max(0, daysBetween(v('l_from'), v('l_to'))); },
+  async leaveFile(el) { if (el.files[0]) { ui.tmpLeave = await compressImage(el.files[0], 1000, 0.6); $('#l_att').textContent = L('फ़ोटो संलग्न ✓', 'Photo attached ✓') + ' (' + Math.round(ui.tmpLeave.length * 0.75 / 1024) + ' KB)'; } },
+  lvFilter(x) { ui.lvFilter = x; render(); },
+  claimMonth(x) { ui.claimMonth = x; render(); },
+  nAsha(x) { ui.nAsha = x; ui.draft = null; render(); }, nType(x) { ui.nType = x; ui.draft = null; render(); },
+  rep(k, x) { ui.rep[k] = x; render(); },
+  updUrl(x) { db.settings.updateUrl = x.trim(); save(); }
+};
+
+/* ====================== क्रियाएँ (onclick) ====================== */
+const act = {
+  tab(t) { ui.tab = t; ui.view = null; render(); window.scrollTo(0, 0); },
+  lang(l) { db.settings.lang = l || (db.settings.lang === 'hi' ? 'en' : 'hi'); save(); render(); },
+  cancelView() { ui.view = null; ui.att = null; ui.tmpPhoto = undefined; render(); },
+
+  /* समूह */
+  newGroup() { ui.tab = 'settings'; ui.view = { name: 'groupForm', id: null }; render(); },
+  editGroup(id) { ui.view = { name: 'groupForm', id }; render(); },
+  saveGroup() {
+    const o = { facility: v('g_fac').trim(), block: v('g_blk').trim(), district: v('g_dst').trim(), moic: v('g_moic').trim(), moicRmc: v('g_rmc').trim(), shs: v('g_shs').trim(), leaveLimit: +v('g_ll') || 0, claimStart: +v('g_cs') || 30, claimEnd: +v('g_ce') || 5, sectorDay: +v('g_sd') || 0, noticePrefix: v('g_np').trim() || 'NTC', noticeDays: +v('g_nd') || 3 };
+    if (!o.facility) return toast(L('अस्पताल का नाम भरें', 'Enter hospital name'));
+    const id = ui.view.id;
+    if (id) Object.assign(db.groups.find(x => x.id === id), o);
+    else { const g = Object.assign({ id: uid(), ashaSeq: 0, noticeSeq: 0 }, o); db.groups.push(g); ui.gid = g.id; ui.tab = 'home'; }
+    save(); ui.view = null; render(); toast(L('सेव हुआ', 'Saved'));
+  },
+  async delGroup(id) {
+    const g = db.groups.find(x => x.id === id);
+    if (!await ask(L(`समूह "${g.facility}" और उसका पूरा डेटा (आशा, बैठक, छुट्टी, क्लेम, नोटिस) हमेशा के लिए हट जाएगा। जारी रखें?`, `Group "${g.facility}" and ALL its data will be deleted permanently. Continue?`))) return;
+    db.groups = db.groups.filter(x => x.id !== id);
+    ['ashas', 'meetings', 'leaves', 'claims', 'absences', 'notices'].forEach(k => db[k] = db[k].filter(x => x.groupId !== id));
+    ui.gid = null; save(); render();
+  },
+
+  /* आशा */
+  newAsha() { ui.tab = 'ashas'; ui.tmpPhoto = ''; ui.view = { name: 'ashaForm', id: null }; render(); },
+  editAsha(id) { ui.tmpPhoto = ashaById(id).photo || ''; ui.view = { name: 'ashaForm', id }; render(); },
+  openAsha(id) { ui.view = { name: 'ashaProfile', id }; render(); window.scrollTo(0, 0); },
+  async saveAsha() {
+    const g = curGroup(); const id = ui.view.id;
+    const o = { name: v('a_name').trim(), husband: v('a_hus').trim(), mobile: v('a_mob').trim(), doj: v('a_doj'), aadhaar: v('a_aad').replace(/\D/g, ''), janAadhaar: v('a_jan').trim(), bankAcName: v('a_acn').trim(), bank: v('a_bank').trim(), account: v('a_acc').trim(), ifsc: v('a_ifsc').trim().toUpperCase(), subcenter: v('a_sc').trim(), village: v('a_vil').trim(), awc: v('a_awc').trim(), population: +v('a_pop') || 0, households: +v('a_hh') || 0, anm: v('a_anm').trim(), cho: v('a_cho').trim() };
+    if (!o.name) return toast(L('आशा का नाम भरें', 'Enter ASHA name'));
+    if (o.aadhaar && o.aadhaar.length !== 12) return info(L('आधार नंबर 12 अंकों का होना चाहिए', 'Aadhaar must be 12 digits'));
+    if (o.ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(o.ifsc)) return info(L('IFSC कोड सही नहीं है (जैसे SBIN0001234)', 'Invalid IFSC (e.g. SBIN0001234)'));
+    o.photo = ui.tmpPhoto || '';
+    if (id) Object.assign(ashaById(id), o);
+    else { g.ashaSeq = (g.ashaSeq || 0) + 1; db.ashas.push(Object.assign({ id: uid(), groupId: g.id, code: 'ASHA-' + pad(g.ashaSeq), status: 'active' }, o)); }
+    save(); ui.view = null; ui.tmpPhoto = undefined; render(); toast(L('आशा सेव हुई', 'ASHA saved'));
+  },
+  async toggleAsha(id) { const a = ashaById(id); a.status = a.status === 'inactive' ? 'active' : 'inactive'; save(); render(); },
+  async delAsha(id) {
+    if (!await ask(L('इस आशा का सारा रिकॉर्ड (उपस्थिति, छुट्टी, क्लेम, नोटिस) हट जाएगा। तबादला/इस्तीफ़ा हो तो "निष्क्रिय" करें। फिर भी हटाएं?', 'All records of this ASHA will be deleted. For transfer/resignation use "Deactivate". Delete anyway?'))) return;
+    db.ashas = db.ashas.filter(x => x.id !== id);
+    ['leaves', 'claims', 'absences', 'notices'].forEach(k => db[k] = db[k].filter(x => x.ashaId !== id));
+    db.meetings.forEach(m => { if (m.att) delete m.att[id]; });
+    ui.view = null; save(); render();
+  },
+  async fieldAbs(id) {
+    const m = $('#modal');
+    m.innerHTML = `<div class="ov"><div class="bx"><b>${L('फ़ील्ड में अनुपस्थिति', 'Field absence')}</b>${inp('fa_d', L('तारीख', 'Date'), today(), 'date')}${inp('fa_n', L('टिप्पणी', 'Note'), '')}<div class="row end" style="margin-top:12px"><button class="btn sec" onclick="$('#modal').innerHTML=''">${L('रद्द', 'Cancel')}</button><button class="btn" onclick="act.saveFieldAbs('${id}')">${L('सेव', 'Save')}</button></div></div></div>`;
+  },
+  saveFieldAbs(id) { const a = ashaById(id); db.absences.push({ id: uid(), groupId: a.groupId, ashaId: id, date: v('fa_d'), note: v('fa_n').trim() }); $('#modal').innerHTML = ''; save(); render(); toast(L('दर्ज हुआ', 'Recorded')); },
+  noticeFor(id) { ui.tab = 'notices'; ui.nAsha = id; ui.nType = 'field'; ui.view = null; ui.draft = null; render(); },
+
+  /* बैठक */
+  newMeeting() { ui.tab = 'meetings'; ui.view = { name: 'meetingForm', id: null }; render(); },
+  editMeeting(id) { ui.view = { name: 'meetingForm', id }; render(); },
+  openMeeting(id) { ui.att = null; ui.view = { name: 'attend', id }; render(); },
+  saveMeeting() {
+    const g = curGroup(); const o = { type: v('m_type'), name: v('m_name').trim(), date: v('m_date'), start: v('m_st'), end: v('m_en') };
+    if (!o.date) return toast(L('तारीख चुनें', 'Pick a date'));
+    if ((o.type === 'training' || o.type === 'other') && !o.name) return toast(L('नाम भरें', 'Enter name'));
+    let id = ui.view.id;
+    if (id) Object.assign(db.meetings.find(x => x.id === id), o);
+    else { id = uid(); db.meetings.push(Object.assign({ id, groupId: g.id }, o)); }
+    ui.att = null; save(); ui.view = { name: 'attend', id }; render();
+  },
+  allAtt(p) { Object.values(ui.att.rows).forEach(r => { r.p = p; if (!p) r.claim = false; }); render(); },
+  saveAtt() {
+    const g = curGroup(); const m = db.meetings.find(x => x.id === ui.view.id); const R = ui.att.rows;
+    m.att = {};
+    Object.keys(R).forEach(id => { const r = R[id]; m.att[id] = { p: r.p, in: r.p ? r.in : '', out: r.p ? r.out : '' }; });
+    db.claims = db.claims.filter(c => c.meetingId !== m.id);
+    Object.keys(R).forEach(id => { if (R[id].p && R[id].claim) setClaim(g, id, ui.att.claimMonth, m.date, 'meeting', m.id); });
+    ui.att = null; ui.view = null; save(); render(); toast(L('उपस्थिति सेव हुई', 'Attendance saved'));
+  },
+  async delMeeting(id) {
+    if (!await ask(L('यह बैठक और इसकी उपस्थिति हट जाएगी। जारी रखें?', 'This meeting and its attendance will be deleted. Continue?'))) return;
+    db.meetings = db.meetings.filter(x => x.id !== id); db.claims = db.claims.filter(c => c.meetingId !== id);
+    ui.view = null; ui.att = null; save(); render();
+  },
+
+  /* छुट्टी */
+  async saveLeave() {
+    const g = curGroup(); const id = v('l_asha'); const from = v('l_from'), to = v('l_to');
+    if (!id) return toast(L('आशा चुनें', 'Select ASHA'));
+    const days = daysBetween(from, to);
+    if (days < 1) return info(L('"तक" की तारीख "से" से पहले नहीं हो सकती', '"To" date cannot be before "From" date'));
+    const y = from.slice(0, 4); const used = leaveUsed(id, y);
+    if (g.leaveLimit && used + days > g.leaveLimit) return info(L(`छुट्टी पास नहीं हो सकती।\nसाल ${y} की सीमा ${g.leaveLimit} दिन है, ${used} दिन पहले ली जा चुकी हैं, यह ${days} दिन और जोड़ने पर सीमा पार हो जाएगी।`, `Leave cannot be approved.\nLimit for ${y} is ${g.leaveLimit} days; ${used} already taken; adding ${days} exceeds the limit.`));
+    const clash = db.leaves.find(l => l.ashaId === id && !(to < l.from || from > l.to));
+    if (clash && !await ask(L(`इन तारीखों में पहले से छुट्टी दर्ज है (${fmt(clash.from)}–${fmt(clash.to)}). फिर भी जोड़ें?`, `Leave already exists in these dates (${fmt(clash.from)}–${fmt(clash.to)}). Add anyway?`))) return;
+    db.leaves.push({ id: uid(), groupId: g.id, ashaId: id, from, to, days, reason: v('l_rs').trim(), attach: ui.tmpLeave || '' });
+    ui.tmpLeave = ''; save(); render(); toast(L('छुट्टी सेव हुई', 'Leave saved'));
+  },
+  async delLeave(id) { if (await ask(L('यह छुट्टी हटाएं?', 'Delete this leave?'))) { db.leaves = db.leaves.filter(x => x.id !== id); save(); render(); } },
+  viewAttach(id) { const l = db.leaves.find(x => x.id === id); $('#modal').innerHTML = `<div class="ov" onclick="$('#modal').innerHTML=''"><img src="${l.attach}" style="max-width:100%;max-height:90vh;border-radius:8px"></div>`; },
+
+  /* क्लेम */
+  claimAll(on) { document.querySelectorAll('.cb:not(:disabled)').forEach(c => c.checked = on); },
+  saveClaimBulk() {
+    const g = curGroup(); const m = v('c_m'); const d = v('c_d'); const ids = [...document.querySelectorAll('.cb:checked')].map(c => c.dataset.id);
+    if (!m || !d) return toast(L('माह और तारीख चुनें', 'Select month and date'));
+    if (!ids.length) return toast(L('कोई आशा नहीं चुनी', 'No ASHA selected'));
+    ids.forEach(id => setClaim(g, id, m, d, 'separate')); save(); render(); toast(ids.length + ' ' + L('का क्लेम दर्ज हुआ', 'claims recorded'));
+  },
+  saveClaimOne(id) { const g = curGroup(); setClaim(g, id, v('c_m'), v('cd_' + id), 'separate'); save(); render(); },
+  async delClaim(id) { if (await ask(L('यह क्लेम रिकॉर्ड हटाएं?', 'Delete this claim record?'))) { db.claims = db.claims.filter(x => x.id !== id); save(); render(); } },
+
+  /* नोटिस */
+  genNotice() {
+    const g = curGroup(); const a = ashaById(v('n_asha')); if (!a) return toast(L('आशा चुनें', 'Select ASHA'));
+    const type = v('n_type'); const lang = v('n_lang'); ui.nLang = lang; const p = {};
+    if (type === 'meeting') { p.meetingId = v('n_meet'); if (!p.meetingId) return info(L('इस आशा की कोई बैठक-अनुपस्थिति दर्ज नहीं है। "अन्य कारण" चुनकर खुद लिखें।', 'No meeting absence recorded. Choose "Other" to write reason.')); ui.nMeet = p.meetingId; }
+    if (type === 'claim') p.month = v('n_month');
+    if (type === 'field') p.date = v('n_fdate');
+    if (type === 'custom') { p.text = v('n_custom').trim(); if (!p.text) return toast(L('कारण लिखें', 'Write the reason')); }
+    const no = `${g.noticePrefix || 'NTC'}/${new Date().getFullYear()}/${pad3((g.noticeSeq || 0) + 1)}`;
+    const date = today(); const R = mkNotice(g, a, type, p, lang, no, date);
+    ui.draft = { groupId: g.id, ashaId: a.id, no, date, html: R.html, subj: R.subj, lang, saved: false };
+    render();
+  },
+  saveNotice() {
+    const g = curGroup(); const d = ui.draft; if (!d || d.saved) return;
+    g.noticeSeq = (g.noticeSeq || 0) + 1; db.notices.push({ id: uid(), groupId: g.id, ashaId: d.ashaId, no: d.no, date: d.date, html: d.html, subj: d.subj });
+    d.saved = true; save(); render(); toast(L('नोटिस सेव हुआ', 'Notice saved'));
+  },
+  printNotice() { outPrint(ui.draft.no, ui.draft.html); },
+  shareNotice(pkg) {
+    const d = ui.draft; const doc = docWrap(d.html);
+    if (A) A.shareFile('notice_' + d.no.replace(/[^\w]+/g, '_') + '.html', 'text/html', b64(doc), pkg || ''); else outFile('notice.html', 'text/html', doc, false);
+  },
+  openNotice(id) { const n = db.notices.find(x => x.id === id); ui.draft = { groupId: n.groupId, ashaId: n.ashaId, no: n.no, date: n.date, html: n.html, subj: n.subj, saved: true }; render(); window.scrollTo(0, 0); },
+
+  /* रिपोर्ट */
+  repPrint() { const R = buildReport(); outPrint(R.title, reportHtml(R)); },
+  repFile(ext, share) {
+    const R = buildReport(); const name = 'report_' + ui.rep.type + '_' + today() + '.' + ext;
+    const mime = ext === 'xls' ? 'application/vnd.ms-excel' : 'application/msword';
+    outFile(name, mime, docWrap(reportHtml(R)), share);
+  },
+  repText(pkg) { outText(reportText(buildReport()), pkg); },
+  repSms() {
+    const R = buildReport(); const a = ui.rep.asha !== 'all' ? ashaById(ui.rep.asha) : null; const txt = reportText(R);
+    if (A) A.sms(a ? (a.mobile || '') : '', txt); else outText(txt);
+  },
+
+  /* बैकअप / अपडेट */
+  backupNow() { const r = backupNow(); toast(A ? (String(r).startsWith('ERR') ? L('बैकअप में दिक्कत: ', 'Backup problem: ') + r : L('बैकअप सेव: ', 'Backup saved: ') + r) : L('यह सुविधा ऐप में चलेगी', 'Works inside the app')); },
+  shareBackup() { const s = JSON.stringify(db); outFile('asha_backup_' + today() + '.json', 'application/json', s, true); },
+  pickBackup() { if (A) A.pickBackup(); else { const i = document.createElement('input'); i.type = 'file'; i.onchange = async () => window.onBackupPicked(await i.files[0].text()); i.click(); } },
+  checkUpdate(manual) {
+    if (!db.settings.updateUrl) { if (manual) info(L('पहले सेटिंग में अपडेट लिंक भरें', 'Enter the update link first')); return; }
+    ui.manualCheck = !!manual;
+    if (A) A.checkUpdate(db.settings.updateUrl); else if (manual) info(L('अपडेट केवल ऐप में चलता है', 'Update works only inside the app'));
+  },
+  async doUpdate() { if (ui.update && await ask(L('नया वर्ज़न डाउनलोड करके इंस्टॉल करें? आपका डेटा सुरक्षित रहेगा।', 'Download and install the new version? Your data stays safe.'))) { backupNow(); A.installUpdate(ui.update.apkUrl); } }
+};
+const pad3 = n => String(n).padStart(3, '0');
+
+/* ====================== ऐप से आने वाले कॉलबैक ====================== */
+window.onBackupPicked = async text => {
+  try {
+    const o = JSON.parse(text);
+    if (!o || !Array.isArray(o.groups)) throw 0;
+    if (!await ask(L('यह बैकअप वापस लाने पर ऐप का मौजूदा डेटा बदल जाएगा। जारी रखें?', 'Restoring will replace the current app data. Continue?'))) return;
+    db = Object.assign(DEF_DB(), o); ui.gid = null; ui.view = null; await persist(); backupNow(); render(); toast(L('डेटा वापस आ गया', 'Data restored'));
+  } catch (e) { info(L('यह सही बैकअप फ़ाइल नहीं है', 'This is not a valid backup file')); }
+};
+window.onUpdateInfo = text => {
+  let o = null; try { o = JSON.parse(text); } catch (e) {}
+  const cur = A ? A.getVersionCode() : 0;
+  if (o && o.versionCode > cur && o.apkUrl) { ui.update = o; render(); }
+  else if (ui.manualCheck) info(o ? L('आप नया वर्ज़न चला रहे हैं ✓', 'You are on the latest version ✓') : L('अपडेट की जानकारी नहीं मिली। इंटरनेट/लिंक जांचें।', 'Could not fetch update info. Check internet/link.'));
+  ui.manualCheck = false;
+};
+window.onBack = () => {
+  if ($('#modal').innerHTML) { $('#modal').innerHTML = ''; return true; }
+  if (ui.view && ui.view.name === 'groupForm' && !db.groups.length) return false;
+  if (ui.view) { ui.view = null; ui.att = null; render(); return true; }
+  if (ui.tab !== 'home') { ui.tab = 'home'; render(); return true; }
+  return false;
+};
+
+/* ====================== शुरुआत ====================== */
+(async () => {
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  try { db = await idbGet('db'); } catch (e) { console.error(e); }
+  if (!db && A && A.loadInternalBackup) {
+    const t = A.loadInternalBackup();
+    if (t) { try { const o = JSON.parse(t); if (o && Array.isArray(o.groups) && o.groups.length) { db = Object.assign(DEF_DB(), o); await persist(); setTimeout(() => toast(L('पुराना डेटा वापस मिल गया', 'Old data restored')), 500); } } catch (e) {} }
+  }
+  if (!db) db = DEF_DB();
+  db = Object.assign(DEF_DB(), db);
+  render();
+  if (db.settings.updateUrl) setTimeout(() => act.checkUpdate(false), 1500);
+})();
+</script>
+</body>
+</html>
